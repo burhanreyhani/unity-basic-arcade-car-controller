@@ -15,12 +15,12 @@ public class BasicNitroSystem : MonoBehaviour
     [SerializeField] float upW = -0.1f;
 
     [Header("Nitro Settings")]
-    public float nitroDuration = 4f;
-    public float nitroCooldown = 0.8f;
-    public float nitroCooldownStart = 1f;
-    public float nitroPower = 10f;
-    public float nitroRefillStart = 3f;
-    public float continueRefillTime = 1f;
+    [SerializeField] float nitroDuration = 4f;
+    [SerializeField] float nitroCooldown = 0.8f;
+    [SerializeField] float nitroCooldownStart = 1f;
+    [SerializeField] float nitroPower = 10f;
+    [SerializeField] float nitroRefillStart = 3f;
+    [SerializeField] float continueRefillTime = 1f;
 
     bool isNitroActive;
     bool reUseNitro = true; // Prevents nitro reuse until refill conditions are met
@@ -117,5 +117,10 @@ public class BasicNitroSystem : MonoBehaviour
 
         Gizmos.color = Color.green;
         Gizmos.DrawSphere(p, 0.1f);
+    }
+
+    public float GetNitroDuration()
+    {
+        return nitroDuration;
     }
 }

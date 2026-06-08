@@ -58,7 +58,7 @@ public class EngineSoundByGear : MonoBehaviour
             return;
         }
 
-        float speed01 = Mathf.Clamp01(car.carSpeedKmh / car.maxSpeed);
+        float speed01 = Mathf.Clamp01(car.carSpeedKmh / car.GetCarMaxSpeed());
         float targetPitch = Mathf.Lerp(minGearPitch, maxGearPitch, speed01);
 
         if (!car.IsGrounded() && throttle > 0.1f)

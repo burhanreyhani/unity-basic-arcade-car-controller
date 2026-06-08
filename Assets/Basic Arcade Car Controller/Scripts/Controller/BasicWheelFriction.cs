@@ -8,8 +8,8 @@ public class BasicWheelFriction : MonoBehaviour
     [Header("Friction Settings")]
     [Range(0f, 2f)] public float forwardGrip = 1.5f;
     [Range(0f, 2f)] public float sidewaysGrip = 1.5f;
-    public AnimationCurve forwardCurve;
-    public AnimationCurve sidewayCurve;
+    [SerializeField] AnimationCurve forwardCurve;
+    [SerializeField] AnimationCurve sidewayCurve;
 
     float lastForwardGrip;
     float lastSidewaysGrip;
@@ -17,7 +17,7 @@ public class BasicWheelFriction : MonoBehaviour
     float currentSpeedKmh;
 
     [Tooltip("Speed at which grip curves reach their end")]
-    public float referenceMaxSpeed = 180f;
+    [SerializeField] float referenceMaxSpeed = 180f;
 
     void Start()
     {

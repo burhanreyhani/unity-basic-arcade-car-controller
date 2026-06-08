@@ -5,46 +5,50 @@ public class BasicCarController : MonoBehaviour
 {
     [HideInInspector] public WheelCollider[] allWheels;
 
-    [SerializeField] WheelCollider[] driveWheels;
-    [SerializeField] WheelCollider[] steeringWheels;
+    BasicEngine basicEngine;
+    BasicGearBox basicGearBox;
+
+    public WheelCollider[] driveWheels;
+    public WheelCollider[] steeringWheels;
 
     WheelCollider[] rearWheels;
 
     [Header("Car Stats")]
-    public AnimationCurve accelerationCurve;
-    public float maxSpeed = 180f;
-    public float motorPower = 1200f;
+    [SerializeField] AnimationCurve accelerationCurve;
+    [SerializeField] float maxSpeed = 180f;
+    [SerializeField] float motorPower = 1200f;
 
     [Header("Reverse Gear Settings")]
-    public float maxReverseSpeed = 40f;
-    public float reversePower = 500f;
+    [SerializeField] float maxReverseSpeed = 40f;
+    [SerializeField] float reversePower = 500f;
 
     [Header("Brake Settings")]
-    public float brakePower = 1000f;
-    public float dragForceForBrakes = 5f;
-    public float handBrakePower = 2500f;
-    public float motorBrakePower = 5f;
-    public float minSpeedForHandBrakeDrift = 30f;
-    public float handBrakeDriftPower = 200f;
+    [SerializeField] float brakePower = 1000f;
+    [SerializeField] float dragForceForBrakes = 5f;
+    [SerializeField] float handBrakePower = 2500f;
+    [SerializeField] float motorBrakePower = 5f;
+    [SerializeField] float minSpeedForHandBrakeDrift = 30f;
+    [SerializeField] float handBrakeDriftPower = 200f;
 
     [Header("Steering Settings")]
-    public float steeringSpeed = 50f;
-    public float maxSteeringAngle = 30f;
-    public float minSteeringAtMaxSpeed = 10f;
+    [SerializeField] float steeringSpeed = 50f;
+    [SerializeField] float maxSteeringAngle = 30f;
+    [SerializeField] float minSteeringAtMaxSpeed = 10f;
 
     [Header("Counter-Steering Settings")]
-    public float maxSlipAngleDeg = 30f;
-    public float counterSteerResponse = 1.5f;
-    public float minSlipForCounter = 5f;
-    public float counterSteerStrength = 15f;
+    [SerializeField] float maxSlipAngleDeg = 30f;
+    [SerializeField] float counterSteerResponse = 1.5f;
+    [SerializeField] float minSlipForCounter = 5f;
+    [SerializeField] float counterSteerStrength = 15f;
 
     [Header("Weight Distribution Settings")]
-    public float xCOMValue = 0.5f;
-    public float speedingZ = -0.05f;
-    public float slowingZ = 0.1f;
-    public float defaultY = 0.3f;
+    [SerializeField] float xCOMValue = 0.5f;
+    [SerializeField] float speedingZ = -0.05f;
+    [SerializeField] float slowingZ = 0.1f;
+    [SerializeField] float defaultY = 0.3f;
 
-    public Controls carInputs;
+    public Controls carInputs { get; private set; }
+    public float avgWheelRPM { get; private set; }
     Rigidbody carBody;
 
     float forwardSpeed;
@@ -61,7 +65,7 @@ public class BasicCarController : MonoBehaviour
     bool wantsToGoForward;
     bool wantsToGoBackward;
 
-    [HideInInspector] public float carSpeedKmh;
+    public float carSpeedKmh { get; private set; }
 
     void Awake()
     {
@@ -72,6 +76,8 @@ public class BasicCarController : MonoBehaviour
     {
         carBody = GetComponent<Rigidbody>();
         allWheels = GetComponentsInChildren<WheelCollider>();
+        basicEngine = GetComponent<BasicEngine>();
+        basicGearBox = GetComponent<BasicGearBox>();
 
         FindHbWheels();
     }
@@ -118,6 +124,8 @@ public class BasicCarController : MonoBehaviour
         CalculateSlip();
 
         AdjustCOM();
+
+        CalculateWheelRPM();
     }
 
     void Accelerate(float throttle)
@@ -126,10 +134,18 @@ public class BasicCarController : MonoBehaviour
         float t = Mathf.InverseLerp(0, maxSpeed, carSpeedKmh);
         float accelMultiplier = Mathf.Clamp01(accelerationCurve.Evaluate(t));
 
+        float torque = basicGearBox.ApplyTorque(avgWheelRPM) / 2;
+
         if (throttle > 0 && carSpeedKmh <= maxSpeed && !wantsToGoForward)
         {
             foreach (var driveWheel in driveWheels)
-                driveWheel.motorTorque = currentMotorTorque * accelMultiplier;
+            {
+                //driveWheel.motorTorque = currentMotorTorque * accelMultiplier;
+                //driveWheel.motorTorque = throttle > 0.1 ? basicEngine.currentRPM : 0;
+                //driveWheel.motorTorque = torque;
+                carBody.AddForce(transform.forward * torque);
+                driveWheel.motorTorque = 0.001f;
+            }
         }
         else if (wantsToGoForward)
         {
@@ -169,7 +185,7 @@ public class BasicCarController : MonoBehaviour
     void Steering(float angle)
     {  
         foreach (var steeringWheel in steeringWheels)
-                steeringWheel.steerAngle = angle;
+            steeringWheel.steerAngle = angle;
     }
 
     void FindHbWheels()
@@ -191,7 +207,6 @@ public class BasicCarController : MonoBehaviour
         {
             foreach (var hbWheels in rearWheels)
                 hbWheels.brakeTorque = handBrakePower;
-
 
             if (carSpeedKmh > minSpeedForHandBrakeDrift)
                 carBody.AddTorque(Vector3.up * steer * handBrakeDriftPower, ForceMode.Force);
@@ -259,6 +274,17 @@ public class BasicCarController : MonoBehaviour
             carBody.centerOfMass = new Vector3(0, defaultY, 0);
     }
 
+    void CalculateWheelRPM() // TODO: Will change for test only.
+    {
+        
+        float wheelRadius = driveWheels[0].radius;
+        avgWheelRPM = carBody.linearVelocity.magnitude / wheelRadius * 60f / (2f * Mathf.PI);
+        //avgWheelRPM = carBody.linearVelocity.magnitude;
+        
+        //avgWheelRPM = basicEngine.currentRPM / basicGearBox.TotalRatio();
+        Debug.Log("WheelRPM: " + avgWheelRPM);
+    }
+
     void ResetWheelForces()
     {
         foreach (var w in driveWheels)
@@ -266,5 +292,10 @@ public class BasicCarController : MonoBehaviour
 
         foreach (var w in allWheels)
             w.brakeTorque = 0;
+    }
+
+    public float GetCarMaxSpeed()
+    {
+        return maxSpeed;
     }
 }
