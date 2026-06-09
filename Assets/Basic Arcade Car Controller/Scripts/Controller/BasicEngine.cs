@@ -24,6 +24,15 @@ public class BasicEngine : MonoBehaviour
     [SerializeField] float minJitter = -3;
     [SerializeField] float maxJitter = 4;
 
+    [Header("Engine Start")]
+    [SerializeField] float addTorqueValue = 20f;
+    [SerializeField] float addRPMValue = 40f;
+    [SerializeField] float startEngineTorque = 300f;
+    [SerializeField] float stallRPM = 900f;
+
+    bool isRunning = false;
+    bool ignite = false;
+
     public float currentRPM { get; private set; }
 
     public float currentEngineTorque { get; private set; }
@@ -39,19 +48,42 @@ public class BasicEngine : MonoBehaviour
     void FixedUpdate()
     {
         float throttleVal = basicCarController.carInputs.Drive.Throttle.ReadValue<float>(); // TODO: Look for more efficient methot.
+        
+        float startEngine = basicGearBox.inputMap.Drive.Ignition.ReadValue<float>();
+        float killEngine = basicGearBox.inputMap.Drive.KillEngine.ReadValue<float>();
+
+        if (startEngine > 0.1f)
+        {
+            ignite = true;
+        }
+        else
+        {
+            ignite = false;
+        }
+
+        if (killEngine > 0.1f)
+        {
+            KillEngine();
+        }
 
         EnegineAngularAcceleration(throttleVal);
     }
 
     void EnegineAngularAcceleration(float throttle)
     {
+        if (!isRunning)
+        {
+            IgniteEngine();
+            return;   
+        }
+
         currentEngineTorque = CalculateTorque(throttle);
         float frictionTorque = baseFriction + friction * (currentRPM / engineMaxRPM);
 
         bool disconnected = basicGearBox.currentGear == 0 || basicGearBox.clutchInput >= 0.1f;
         float totalRatio = basicGearBox.TotalRatio();
         float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? carBody.mass * basicCarController.driveWheels[0].radius * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f;
-        float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad();
+        float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad(); // TODO: Not implementing yet
         float angularAcceleration = (currentEngineTorque - frictionTorque) / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
 
         float deltaRPM = angularAcceleration * (60 / (2f * Mathf.PI)) * Time.fixedDeltaTime;
@@ -59,7 +91,7 @@ public class BasicEngine : MonoBehaviour
         float scaleJitter = 0.5f;
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
-
+    
         if (basicGearBox.currentGear != 0 && basicGearBox.clutchInput < 0.1f)
         {
             float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM) * 60f / (2f * Mathf.PI);
@@ -72,9 +104,13 @@ public class BasicEngine : MonoBehaviour
             */
         }
 
-        if (currentRPM < engineIdleRPM && throttle < 0.01f)
+        if (currentRPM < engineIdleRPM && throttle < 0.01f && disconnected)
         {
             currentRPM = engineIdleRPM;
+        }
+        else if (currentRPM < stallRPM)
+        {
+            isRunning = false;
         }
 
         if (currentRPM > engineMaxRPM)
@@ -92,7 +128,7 @@ public class BasicEngine : MonoBehaviour
         float t = Mathf.InverseLerp(0, engineMaxRPM, currentRPM);
         float accelMultiplier = Mathf.Clamp01(torqueCurve.Evaluate(t));
 
-        float idleBoostThreshold = 200f;
+        float idleBoostThreshold = 50f;
         float multiplier = 0.1f;
         float idleTorque = currentRPM <= engineIdleRPM + idleBoostThreshold ? engineTorque * multiplier : 0f;
 
@@ -110,6 +146,49 @@ public class BasicEngine : MonoBehaviour
         }
 
         return 0;
+    }
+
+    void IgniteEngine()
+    {
+        if (isRunning) return;
+
+        if (ignite && !isRunning)
+        {
+            currentEngineTorque += addTorqueValue;
+        }
+        else if (!ignite && !isRunning && Mathf.Abs(currentEngineTorque) >= 0)
+        {
+            currentEngineTorque -= addTorqueValue;
+            currentRPM -= addRPMValue;
+
+            if (currentEngineTorque < 0)
+                currentEngineTorque = 0f;
+            
+            if (currentRPM < 0)
+                currentRPM = 0;
+        }
+
+        if (currentEngineTorque >= startEngineTorque)
+        {
+            currentRPM += addRPMValue;
+
+            if (currentRPM >= engineIdleRPM)
+            {
+                isRunning = true;
+            }
+        }
+    }
+
+    void KillEngine()
+    {
+        float killEngineThreshold = 200f;
+
+        if (currentRPM > engineIdleRPM + killEngineThreshold)
+        {
+            return;
+        }
+        
+        isRunning = false;
     }
 
     public float GetMaxRPM()
