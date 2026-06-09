@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class BasicGearBox : MonoBehaviour
 {
-    Rigidbody rb;
+    //Rigidbody rb;
     BasicEngine basicEngine;
 
     [Header("Gearbox Inertia Settings")]
@@ -21,9 +21,9 @@ public class BasicGearBox : MonoBehaviour
     [SerializeField] float clutchTorqueMax = 250f;
 
     [Header("This will be changed with clutch settings")]
-    float shiftCooldown = 1.5f;
+    //float shiftCooldown = 1.5f;
 
-    InputMap inputMap;
+    public InputMap inputMap;
 
     public float lastShiftTime { get; private set; }
     public int currentGear { get; private set; }
@@ -51,7 +51,7 @@ public class BasicGearBox : MonoBehaviour
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        //rb = GetComponent<Rigidbody>();
         basicEngine = GetComponent<BasicEngine>();
     }
 

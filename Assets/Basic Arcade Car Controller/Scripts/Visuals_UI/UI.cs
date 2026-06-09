@@ -13,6 +13,7 @@ public class UI : MonoBehaviour
     public TMP_Text gearText;
     public TMP_Text nitroText;
     public TMP_Text rpmText;
+    public TMP_Text engineTorque;
 
     void Start()
     {
@@ -30,6 +31,9 @@ public class UI : MonoBehaviour
     {
         if (speedText != null)
             speedText.text = "Speed: " + basicCarController.carSpeedKmh.ToString("F1") + " KM/H";
+
+        if (engineTorque != null)
+            engineTorque.text = "Engine Torque: " + basicEngine.currentEngineTorque;
 
         if (gearText != null)
         {

@@ -13,7 +13,6 @@ public class BasicEngine : MonoBehaviour
     [SerializeField] float engineTorque = 1500f;
     [SerializeField] float engineMaxRPM = 7000f;
     [SerializeField] float engineIdleRPM = 1000f;
-    [SerializeField] float motorBrake = 1000f;
 
     [Header("Engine Inertia Settings")]
     [SerializeField] float engineInertia = 10f;
@@ -91,7 +90,7 @@ public class BasicEngine : MonoBehaviour
         float scaleJitter = 0.5f;
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
-    
+        
         if (basicGearBox.currentGear != 0 && basicGearBox.clutchInput < 0.1f)
         {
             float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM) * 60f / (2f * Mathf.PI);
@@ -101,7 +100,7 @@ public class BasicEngine : MonoBehaviour
             float timeThreshold = 0.2f;
             if (Time.time - basicGearBox.lastShiftTime > timeThreshold)
                 basicGearBox.SetJustShifted(false);
-            */
+            */ 
         }
 
         if (currentRPM < engineIdleRPM && throttle < 0.01f && disconnected)
@@ -121,31 +120,18 @@ public class BasicEngine : MonoBehaviour
 
     float CalculateTorque(float throttle)
     {
-        float motorBrakeVal = CalculateMotorBrake(throttle);
-
         float engineSpeedFactor = Mathf.InverseLerp(0, engineMaxRPM, currentRPM);
         float currentMotorTorque = Mathf.Lerp(engineTorque, 0, engineSpeedFactor);
         float t = Mathf.InverseLerp(0, engineMaxRPM, currentRPM);
         float accelMultiplier = Mathf.Clamp01(torqueCurve.Evaluate(t));
 
-        float idleBoostThreshold = 50f;
+        float idleBoostThreshold = 200f;
+        float idleFactor = Mathf.Clamp01(1f - (currentRPM - engineIdleRPM) / idleBoostThreshold);
         float multiplier = 0.1f;
-        float idleTorque = currentRPM <= engineIdleRPM + idleBoostThreshold ? engineTorque * multiplier : 0f;
+        float idleTorque = currentRPM <= engineIdleRPM + idleBoostThreshold ? engineTorque * multiplier * idleFactor : 0f;
 
         float totalTorque = throttle * currentMotorTorque * accelMultiplier;
-        return totalTorque + idleTorque - motorBrakeVal;
-    }
-
-    float CalculateMotorBrake(float throttle)
-    {
-        if (throttle < 0.1f)
-        {
-            float brakeTorque = motorBrake * (currentRPM / engineMaxRPM);
-
-            return brakeTorque;
-        }
-
-        return 0;
+        return totalTorque + idleTorque;
     }
 
     void IgniteEngine()

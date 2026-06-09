@@ -276,13 +276,12 @@ public class BasicCarController : MonoBehaviour
 
     void CalculateWheelRPM() // TODO: Will change for test only.
     {
-        
         float wheelRadius = driveWheels[0].radius;
         avgWheelRPM = carBody.linearVelocity.magnitude / wheelRadius * 60f / (2f * Mathf.PI);
         //avgWheelRPM = carBody.linearVelocity.magnitude;
         
         //avgWheelRPM = basicEngine.currentRPM / basicGearBox.TotalRatio();
-        Debug.Log("WheelRPM: " + avgWheelRPM);
+        //Debug.Log("WheelRPM: " + avgWheelRPM);
     }
 
     void ResetWheelForces()
