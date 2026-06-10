@@ -47,7 +47,7 @@ public class BasicEngine : MonoBehaviour
     void FixedUpdate()
     {
         float throttleVal = basicCarController.carInputs.Drive.Throttle.ReadValue<float>(); // TODO: Look for more efficient methot.
-        
+
         float startEngine = basicGearBox.inputMap.Drive.Ignition.ReadValue<float>();
         float killEngine = basicGearBox.inputMap.Drive.KillEngine.ReadValue<float>();
 
@@ -81,8 +81,9 @@ public class BasicEngine : MonoBehaviour
 
         bool disconnected = basicGearBox.currentGear == 0 || basicGearBox.clutchInput >= 0.1f;
         float totalRatio = basicGearBox.TotalRatio();
-        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? carBody.mass * basicCarController.driveWheels[0].radius * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f;
-        float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad(); // TODO: Not implementing yet
+        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? carBody.mass * basicCarController.driveWheels[0].radius
+        * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f; //  basicCarController.driveWheels[0].radius * (totalRatio * totalRatio)
+        //float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad(); // TODO: Not implemented yet
         float angularAcceleration = (currentEngineTorque - frictionTorque) / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
 
         float deltaRPM = angularAcceleration * (60 / (2f * Mathf.PI)) * Time.fixedDeltaTime;
@@ -91,16 +92,15 @@ public class BasicEngine : MonoBehaviour
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
         
-        if (basicGearBox.currentGear != 0 && basicGearBox.clutchInput < 0.1f)
+        if (basicGearBox.currentGear != 0 && basicGearBox.clutchInput < 0.1f) // && basicGearBox.GetJustShifted()
         {
             float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM) * 60f / (2f * Mathf.PI);
             float rpmSnapSpeed = 10f;
             currentRPM = Mathf.Lerp(currentRPM, targetRPM, Time.fixedDeltaTime * rpmSnapSpeed);
-            /*
+            
             float timeThreshold = 0.2f;
             if (Time.time - basicGearBox.lastShiftTime > timeThreshold)
                 basicGearBox.SetJustShifted(false);
-            */ 
         }
 
         if (currentRPM < engineIdleRPM && throttle < 0.01f && disconnected)

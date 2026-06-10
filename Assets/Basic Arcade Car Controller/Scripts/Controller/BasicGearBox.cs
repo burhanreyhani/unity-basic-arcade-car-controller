@@ -3,6 +3,7 @@ using UnityEngine;
 public class BasicGearBox : MonoBehaviour
 {
     //Rigidbody rb;
+    BasicCarController basicCarController;
     BasicEngine basicEngine;
 
     [Header("Gearbox Inertia Settings")]
@@ -19,18 +20,22 @@ public class BasicGearBox : MonoBehaviour
     [Header("Clutch Settings")]
     [SerializeField] float clutchStiffness = 50f;
     [SerializeField] float clutchTorqueMax = 250f;
-
-    [Header("This will be changed with clutch settings")]
-    //float shiftCooldown = 1.5f;
+    [SerializeField] float clutchSpeed = 5f;
 
     public InputMap inputMap;
 
     public float lastShiftTime { get; private set; }
-    public int currentGear { get; private set; }
     public float clutchInput { get; private set; }
+    public int currentGear { get; private set; }
+
+    float clutchTorque;
+    float clutchVal;
+    float clutchInputThreshold = 0.9f;
 
     bool gearUp;
     bool gearDown;
+
+    bool C;
 
     bool justShifted;
 
@@ -53,20 +58,22 @@ public class BasicGearBox : MonoBehaviour
     {
         //rb = GetComponent<Rigidbody>();
         basicEngine = GetComponent<BasicEngine>();
+        basicCarController = GetComponent<BasicCarController>();
     }
 
     void Update()
     {
         clutchInput = inputMap.Drive.Clutch.ReadValue<float>();
+
         gearUp = inputMap.Drive.GearUp.WasPressedThisFrame();
         gearDown = inputMap.Drive.GearDown.WasPressedThisFrame();
 
-        if (clutchInput >= 0.01 && gearUp)
+        if (clutchInput >= clutchInputThreshold && gearUp)
         {
             ShiftUp();
         }
 
-        if (clutchInput >= 0.01 && gearDown)
+        if (clutchInput >= clutchInputThreshold && gearDown)
         {
             ShiftDown();
         }
@@ -74,6 +81,7 @@ public class BasicGearBox : MonoBehaviour
 
     void FixedUpdate()
     {
+        clutchTorque = CalculateClutch();
         /*
         float speed = Vector3.Dot(rb.linearVelocity, transform.forward);
 
@@ -96,7 +104,7 @@ public class BasicGearBox : MonoBehaviour
 
     public float GearboxInertia()
     {
-        if (currentGear == 0 || clutchInput >= 0.1f)
+        if (currentGear == 0 || clutchInput >= clutchInputThreshold)
         {
             return 0;
         }
@@ -104,15 +112,13 @@ public class BasicGearBox : MonoBehaviour
         return 0.5f * gearboxMass * (gearboxRadius * gearboxRadius);
     }
 
-    public float ApplyTorque(float avgWheelRPM)
+    public float ApplyTorque()
     {
         // This is for power that goes to the drivetrain.
         if (currentGear == 0)
         {
             return 0;
         }
-
-        float clutchTorque = CalculateClutch(avgWheelRPM);
 
         if (currentGear == -1)
         {
@@ -184,9 +190,6 @@ public class BasicGearBox : MonoBehaviour
     }
 
     /*
-    TODO: When smooth it, make sure the transition curve is based on clutchEngage in CalculateClutch, not another hardcoded threshold.
-    */
-    /*
     float AutoClutch()
     {
         float clutchThreshold = 200f;
@@ -197,18 +200,20 @@ public class BasicGearBox : MonoBehaviour
         return 0;
     }
     */
-
-    float CalculateClutch(float avgWheelRPM)
+    
+    float CalculateClutch()
     {
         float engineOmega = InputOmega();
-        float gearboxOmega = avgWheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
+        float gearboxOmega = basicCarController.avgWheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
 
-        float clutchEngage = 1f - clutchInput;
+        clutchVal = Mathf.MoveTowards(clutchVal, clutchInput, Time.deltaTime * clutchSpeed);
+
+        float clutchEngage = 1f - clutchVal;
         float deltaOmega = engineOmega - gearboxOmega;
         float torque = deltaOmega * clutchStiffness;
         float maxTorque = clutchTorqueMax * clutchEngage;
 
-        return Mathf.Clamp(torque, -maxTorque, maxTorque);
+        return Mathf.Clamp(torque, 0, maxTorque);
     }
 
     public float GetFinalDrive()

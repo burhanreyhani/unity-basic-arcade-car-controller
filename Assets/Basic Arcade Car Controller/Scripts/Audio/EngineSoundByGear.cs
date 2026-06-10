@@ -4,7 +4,8 @@ public class EngineSoundByGear : MonoBehaviour
 {
     BasicCarController car;
     BasicGearBox gearbox;
-    AudioSource[] gearSources;
+    BasicEngine engine;
+    [SerializeField] AudioSource gearSource;
 
     [Header("Pitch Settings")]
     public float idlePitch = 0.9f;
@@ -18,55 +19,21 @@ public class EngineSoundByGear : MonoBehaviour
 
     void Start()
     {
-        car = GetComponentInParent<BasicCarController>();
-        gearbox = GetComponentInParent<BasicGearBox>();
-        gearSources = GetComponentsInChildren<AudioSource>();
+        engine = GetComponentInParent<BasicEngine>();
 
-        foreach (var s in gearSources)
-        {
-            s.volume = 0f;
-            s.loop = true;
-            s.Play();
-        }
+        gearSource.volume = 0;
+        gearSource.loop = true;
+        gearSource.Play();
     }
 
     void Update()
     {
-        int gear = gearbox.currentGear;
-
-        for (int i = 0; i < gearSources.Length; i++)
-        {
-            float targetVolume = (i == gear) ? maxVolume : 0f;
-            gearSources[i].volume = Mathf.MoveTowards(gearSources[i].volume, targetVolume, fadeSpeed * Time.deltaTime);
-
-            UpdatePitch(i, gearSources[i]);
-        }
-    }
-
-    void UpdatePitch(int index, AudioSource source)
-    {
-        float throttle = car.carInputs.Drive.Throttle.ReadValue<float>();
-
-        if (index == 0 && throttle < 0.1f)
-        {
-            source.pitch = Mathf.Lerp(source.pitch, idlePitch, pitchSmooth * Time.deltaTime);
-            return;
-        }
-        else if (throttle > 0.1 && car.carSpeedKmh < 0.1f)
-        {
-            source.pitch = Mathf.Lerp(source.pitch, maxGearPitch, pitchSmooth * Time.deltaTime);
-            return;
-        }
-
-        float speed01 = Mathf.Clamp01(car.carSpeedKmh / car.GetCarMaxSpeed());
+        
+        float speed01 = Mathf.Clamp01(engine.currentRPM / engine.GetMaxRPM());
         float targetPitch = Mathf.Lerp(minGearPitch, maxGearPitch, speed01);
+        float targetVolume = Mathf.Lerp(0, maxVolume, speed01);
 
-        if (!car.IsGrounded() && throttle > 0.1f)
-            source.pitch = Mathf.Lerp(source.pitch, maxGearPitch, pitchSmooth * Time.deltaTime);
-        else if ((!car.IsGrounded() && throttle < 0.1f) || throttle < 0.1f)
-            source.pitch = Mathf.Lerp(source.pitch, idlePitch, pitchSmooth * Time.deltaTime);
-        else
-            source.pitch = Mathf.Lerp(source.pitch, targetPitch, pitchSmooth * Time.deltaTime);    
-
+        gearSource.pitch = Mathf.Lerp(gearSource.pitch, targetPitch, pitchSmooth * Time.deltaTime);
+        gearSource.volume = Mathf.Lerp(gearSource.volume, targetVolume, fadeSpeed * Time.deltaTime);
     }
 }

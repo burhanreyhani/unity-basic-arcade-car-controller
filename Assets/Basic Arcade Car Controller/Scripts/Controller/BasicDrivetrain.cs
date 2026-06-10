@@ -57,7 +57,7 @@ public class BasicDrivetrain : MonoBehaviour
     void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
 out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque, out float rightRearTorque)
     {
-        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(avgDrivenWheelRPM));
+        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque());
         leftFrontTorque = rightFrontTorque = leftRearTorque = rightRearTorque = 0f;
 
         float distEvenly = 0.5f;

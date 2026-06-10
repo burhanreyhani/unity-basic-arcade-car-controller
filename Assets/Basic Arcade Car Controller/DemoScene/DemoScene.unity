@@ -558,13 +558,35 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7336845343170179162, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+      propertyPath: idlePitch
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: maxVolume
       value: 0.2
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+      propertyPath: minGearPitch
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+      propertyPath: gearSources.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+      propertyPath: 'gearSources.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1783779181}
+    m_RemovedComponents:
+    - {fileID: 6487450623217769820, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+    - {fileID: 246008789935412304, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+    - {fileID: 7358021032209438421, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+    - {fileID: 2716428115630755675, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+    - {fileID: 54688993021580793, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+    - {fileID: 6445105784105025953, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -12366,6 +12388,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 572427544}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 92.39}
+--- !u!82 &1783779181 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 5985766443997961197, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+  m_PrefabInstance: {fileID: 53404783}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1809348078
 GameObject:
   m_ObjectHideFlags: 0
@@ -15398,10 +15425,10 @@ GameObject:
   - component: {fileID: 919132148141804666}
   - component: {fileID: 919132148141804665}
   - component: {fileID: 919132148141804664}
-  - component: {fileID: 919132148141804663}
   - component: {fileID: 919132148141804662}
-  - component: {fileID: 919132148141804661}
+  - component: {fileID: 919132148141804663}
   - component: {fileID: 919132148141804667}
+  - component: {fileID: 919132148141804661}
   - component: {fileID: 919132148141804668}
   m_Layer: 0
   m_Name: Pojod406
@@ -15459,7 +15486,9 @@ MonoBehaviour:
   gearUpRPM: 3000
   gearDownRPM: 1200
   clutchStiffness: 50
-  clutchTorqueMax: 800
+  clutchTorqueMax: 900
+  clutchSpeed: 20
+  clutchInput: 0
 --- !u!114 &919132148141804663
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15641,6 +15670,7 @@ MonoBehaviour:
   speedingZ: -0.05
   slowingZ: 0.1
   defaultY: 0.3
+  throttle: 0
 --- !u!54 &919132148141804665
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -15764,10 +15794,9 @@ MonoBehaviour:
   engineTorque: 1500
   engineMaxRPM: 7000
   engineIdleRPM: 1000
-  motorBrake: 1000
   engineInertia: 0.6
-  baseFriction: 0.05
-  friction: 0.5
+  baseFriction: 50
+  friction: 20
   minJitter: -3
   maxJitter: 4
   addTorqueValue: 20

@@ -134,7 +134,7 @@ public class BasicCarController : MonoBehaviour
         float t = Mathf.InverseLerp(0, maxSpeed, carSpeedKmh);
         float accelMultiplier = Mathf.Clamp01(accelerationCurve.Evaluate(t));
 
-        float torque = basicGearBox.ApplyTorque(avgWheelRPM) / 2;
+        float torque = basicGearBox.ApplyTorque() / 2;
 
         if (throttle > 0 && carSpeedKmh <= maxSpeed && !wantsToGoForward)
         {
