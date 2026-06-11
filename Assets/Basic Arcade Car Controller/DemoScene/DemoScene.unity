@@ -562,15 +562,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: idlePitch
-      value: 0
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: maxVolume
-      value: 0.2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
+      propertyPath: gearSource
+      value: 
+      objectReference: {fileID: 1783779181}
+    - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: minGearPitch
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 8416093477264835549, guid: 8815d37353d24634fbd1a23c12aabad8, type: 3}
       propertyPath: gearSources.Array.size
@@ -15487,8 +15491,7 @@ MonoBehaviour:
   gearDownRPM: 1200
   clutchStiffness: 50
   clutchTorqueMax: 900
-  clutchSpeed: 20
-  clutchInput: 0
+  clutchSpeed: 8
 --- !u!114 &919132148141804663
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15670,7 +15673,6 @@ MonoBehaviour:
   speedingZ: -0.05
   slowingZ: 0.1
   defaultY: 0.3
-  throttle: 0
 --- !u!54 &919132148141804665
 Rigidbody:
   m_ObjectHideFlags: 0

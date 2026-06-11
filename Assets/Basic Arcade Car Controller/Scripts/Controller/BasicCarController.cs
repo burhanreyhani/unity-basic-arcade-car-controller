@@ -5,8 +5,9 @@ public class BasicCarController : MonoBehaviour
 {
     [HideInInspector] public WheelCollider[] allWheels;
 
-    BasicEngine basicEngine;
-    BasicGearBox basicGearBox;
+    //BasicEngine basicEngine;
+    //BasicGearBox basicGearBox;
+    BasicDrivetrain basicDrivetrain;
 
     public WheelCollider[] driveWheels;
     public WheelCollider[] steeringWheels;
@@ -76,8 +77,9 @@ public class BasicCarController : MonoBehaviour
     {
         carBody = GetComponent<Rigidbody>();
         allWheels = GetComponentsInChildren<WheelCollider>();
-        basicEngine = GetComponent<BasicEngine>();
-        basicGearBox = GetComponent<BasicGearBox>();
+        //basicEngine = GetComponent<BasicEngine>();
+        //basicGearBox = GetComponent<BasicGearBox>();
+        basicDrivetrain = GetComponent<BasicDrivetrain>();
 
         FindHbWheels();
     }
@@ -134,7 +136,7 @@ public class BasicCarController : MonoBehaviour
         float t = Mathf.InverseLerp(0, maxSpeed, carSpeedKmh);
         float accelMultiplier = Mathf.Clamp01(accelerationCurve.Evaluate(t));
 
-        float torque = basicGearBox.ApplyTorque() / 2;
+        //float torque = basicGearBox.ApplyTorque(avgWheelRPM) / 2;
 
         if (throttle > 0 && carSpeedKmh <= maxSpeed && !wantsToGoForward)
         {
@@ -143,7 +145,7 @@ public class BasicCarController : MonoBehaviour
                 //driveWheel.motorTorque = currentMotorTorque * accelMultiplier;
                 //driveWheel.motorTorque = throttle > 0.1 ? basicEngine.currentRPM : 0;
                 //driveWheel.motorTorque = torque;
-                carBody.AddForce(transform.forward * torque);
+                //carBody.AddForce(transform.forward * basicDrivetrain.avgDrivenWheelRPM);
                 driveWheel.motorTorque = 0.001f;
             }
         }

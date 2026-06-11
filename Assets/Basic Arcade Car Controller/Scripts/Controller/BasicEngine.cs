@@ -83,8 +83,8 @@ public class BasicEngine : MonoBehaviour
         float totalRatio = basicGearBox.TotalRatio();
         float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? carBody.mass * basicCarController.driveWheels[0].radius
         * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f; //  basicCarController.driveWheels[0].radius * (totalRatio * totalRatio)
-        //float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad(); // TODO: Not implemented yet
-        float angularAcceleration = (currentEngineTorque - frictionTorque) / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
+        float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad();
+        float angularAcceleration = (currentEngineTorque - frictionTorque - drivetrainload) / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
 
         float deltaRPM = angularAcceleration * (60 / (2f * Mathf.PI)) * Time.fixedDeltaTime;
 
@@ -92,9 +92,9 @@ public class BasicEngine : MonoBehaviour
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
         
-        if (basicGearBox.currentGear != 0 && basicGearBox.clutchInput < 0.1f) // && basicGearBox.GetJustShifted()
+        if (basicGearBox.currentGear != 0 && basicGearBox.clutchVal < 0.1f && basicGearBox.GetJustShifted())
         {
-            float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM) * 60f / (2f * Mathf.PI);
+            float targetRPM = basicGearBox.ApplyGearRatio(basicDrivetrain.avgDrivenWheelRPM) * 60f / (2f * Mathf.PI);
             float rpmSnapSpeed = 10f;
             currentRPM = Mathf.Lerp(currentRPM, targetRPM, Time.fixedDeltaTime * rpmSnapSpeed);
             

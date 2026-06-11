@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class BasicGearBox : MonoBehaviour
 {
-    //Rigidbody rb;
-    BasicCarController basicCarController;
     BasicEngine basicEngine;
 
     [Header("Gearbox Inertia Settings")]
@@ -27,9 +25,9 @@ public class BasicGearBox : MonoBehaviour
     public float lastShiftTime { get; private set; }
     public float clutchInput { get; private set; }
     public int currentGear { get; private set; }
+    public float clutchVal { get; private set; }
 
     float clutchTorque;
-    float clutchVal;
     float clutchInputThreshold = 0.9f;
 
     bool gearUp;
@@ -56,9 +54,7 @@ public class BasicGearBox : MonoBehaviour
 
     void Start()
     {
-        //rb = GetComponent<Rigidbody>();
         basicEngine = GetComponent<BasicEngine>();
-        basicCarController = GetComponent<BasicCarController>();
     }
 
     void Update()
@@ -68,12 +64,12 @@ public class BasicGearBox : MonoBehaviour
         gearUp = inputMap.Drive.GearUp.WasPressedThisFrame();
         gearDown = inputMap.Drive.GearDown.WasPressedThisFrame();
 
-        if (clutchInput >= clutchInputThreshold && gearUp)
+        if (clutchVal >= clutchInputThreshold && gearUp)
         {
             ShiftUp();
         }
 
-        if (clutchInput >= clutchInputThreshold && gearDown)
+        if (clutchVal >= clutchInputThreshold && gearDown)
         {
             ShiftDown();
         }
@@ -81,7 +77,6 @@ public class BasicGearBox : MonoBehaviour
 
     void FixedUpdate()
     {
-        clutchTorque = CalculateClutch();
         /*
         float speed = Vector3.Dot(rb.linearVelocity, transform.forward);
 
@@ -104,7 +99,7 @@ public class BasicGearBox : MonoBehaviour
 
     public float GearboxInertia()
     {
-        if (currentGear == 0 || clutchInput >= clutchInputThreshold)
+        if (currentGear == 0 || clutchVal >= clutchInputThreshold)
         {
             return 0;
         }
@@ -112,8 +107,10 @@ public class BasicGearBox : MonoBehaviour
         return 0.5f * gearboxMass * (gearboxRadius * gearboxRadius);
     }
 
-    public float ApplyTorque()
+    public float ApplyTorque(float wheelRPM)
     {
+        clutchTorque = CalculateClutch(wheelRPM);
+        
         // This is for power that goes to the drivetrain.
         if (currentGear == 0)
         {
@@ -131,7 +128,7 @@ public class BasicGearBox : MonoBehaviour
     public float ApplyGearRatio(float avgWheelRPM)
     {
         // This is for engine RPM snap.
-        float wheelOmega = avgWheelRPM * 2f * Mathf.PI / 60f;
+        float wheelOmega = avgWheelRPM * 2f * Mathf.PI / 60f; // TODO: avgWheelRPM will come from drivetrain
 
         if (currentGear == 0)
         {
@@ -201,12 +198,12 @@ public class BasicGearBox : MonoBehaviour
     }
     */
     
-    float CalculateClutch()
+    float CalculateClutch(float wheelRPM)
     {
         float engineOmega = InputOmega();
-        float gearboxOmega = basicCarController.avgWheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
+        float gearboxOmega = wheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
 
-        clutchVal = Mathf.MoveTowards(clutchVal, clutchInput, Time.deltaTime * clutchSpeed);
+        clutchVal = Mathf.MoveTowards(clutchVal, clutchInput, Time.deltaTime * clutchSpeed); // TODO: This is for keyboard. Will be extended for auto cluthc in the future.
 
         float clutchEngage = 1f - clutchVal;
         float deltaOmega = engineOmega - gearboxOmega;

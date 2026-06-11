@@ -2,34 +2,38 @@ using UnityEngine;
 
 public class BasicDrivetrain : MonoBehaviour
 {
-    Rigidbody rb;
     BasicGearBox basicGearBox;
-    BasicCarController basicCarController;
 
     IDifferential rearDiff;
     IDifferential frontDiff;
     IDifferential centerDiff;
 
+    [Header("Drivetrain config")]
+    [SerializeField] DrivetrainType driveType = DrivetrainType.RWD;
+    [SerializeField] DifferentialType diffType = DifferentialType.Open;
     [SerializeField] float efficiency = 0.85f;
 
-    float downstreamTorque;
-    float avgDrivenWheelRPM;
+    [Header("LSD Settings (Only applies when LSD selected)")]
+    [SerializeField] float lockingTorque = 400f;
+    [SerializeField] float lockThreshold = 60f;
+    [SerializeField] float lockStrength = 0.5f;
 
-    DrivetrainType driveType;
     enum DrivetrainType { RWD, FWD, AWD }
 
     enum DiffPosition { Rear, Front, Center }
+    enum DifferentialType { Open, Locked, LSD }
+
+    public float avgDrivenWheelRPM { get; private set; }
+    float downstreamTorque;
+
+    void Awake()
+    {
+        BuildDriveTrain();
+    }
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
         basicGearBox = GetComponent<BasicGearBox>();
-        basicCarController = GetComponent<BasicCarController>();
-    }
-
-    void FixedUpdate()
-    {
-        
     }
 
     void SetDifferential(IDifferential diff, DiffPosition position)
@@ -54,10 +58,10 @@ public class BasicDrivetrain : MonoBehaviour
         }
     }
 
-    void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
+    public void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
 out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque, out float rightRearTorque)
     {
-        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque());
+        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(avgDrivenWheelRPM));
         leftFrontTorque = rightFrontTorque = leftRearTorque = rightRearTorque = 0f;
 
         float distEvenly = 0.5f;
@@ -90,7 +94,7 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
         }
     }
 
-    float CalculateDownstramTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM)
+    public float CalculateDownstramTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM)
     {
         switch (driveType)
         {
@@ -111,7 +115,7 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
         }
     }
 
-    float DrivenWheelRadius(float frontRadius, float rearRadius)
+    public float DrivenWheelRadius(float frontRadius, float rearRadius)
     {
         float divide = 0.5f;
         return driveType switch
@@ -144,5 +148,31 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
         } 
         
         return downstreamTorque / totalRatio;
+    }
+
+    void BuildDriveTrain()
+    {
+        IDifferential diff = diffType switch
+        {
+            DifferentialType.Open => new OpenDifferential(),
+            DifferentialType.Locked => new LockedDifferential(),
+            DifferentialType.LSD => new LimitedSlipDifferential(lockingTorque, lockThreshold, lockStrength),
+            _ => new OpenDifferential()
+        };
+
+        if (driveType == DrivetrainType.AWD)
+        {
+            SetDifferential(new OpenDifferential(), DiffPosition.Center);
+            SetDifferential(diff, DiffPosition.Front);
+            SetDifferential(diff, DiffPosition.Rear);
+        }
+        else
+        {
+            DiffPosition pos = driveType == DrivetrainType.FWD
+                ? DiffPosition.Front
+                : DiffPosition.Rear;
+
+            SetDifferential(diff, pos);
+        }
     }
 }
