@@ -17,25 +17,24 @@ public class BasicGearBox : MonoBehaviour
 
     [Header("Clutch Settings")]
     [SerializeField] float clutchStiffness = 50f;
-    [SerializeField] float clutchTorqueMax = 250f;
     [SerializeField] float clutchSpeed = 5f;
 
     public InputMap inputMap;
 
     public float lastShiftTime { get; private set; }
-    public float clutchInput { get; private set; }
     public int currentGear { get; private set; }
     public float clutchVal { get; private set; }
+    float clutchInput;
 
-    float clutchTorque;
-    float clutchInputThreshold = 0.9f;
+    public float clutchTorque { get; private set; }
+    float clutchInputThresholdForGear = 0.9f;
+    float clutchThreshold = 0.35f;
 
     bool gearUp;
     bool gearDown;
 
-    bool C;
-
     bool justShifted;
+
 
     void Awake()
     {
@@ -64,12 +63,12 @@ public class BasicGearBox : MonoBehaviour
         gearUp = inputMap.Drive.GearUp.WasPressedThisFrame();
         gearDown = inputMap.Drive.GearDown.WasPressedThisFrame();
 
-        if (clutchVal >= clutchInputThreshold && gearUp)
+        if (clutchVal >= clutchInputThresholdForGear && gearUp)
         {
             ShiftUp();
         }
 
-        if (clutchVal >= clutchInputThreshold && gearDown)
+        if (clutchVal >= clutchInputThresholdForGear && gearDown)
         {
             ShiftDown();
         }
@@ -99,7 +98,7 @@ public class BasicGearBox : MonoBehaviour
 
     public float GearboxInertia()
     {
-        if (currentGear == 0 || clutchVal >= clutchInputThreshold)
+        if (currentGear == 0 || clutchVal >= clutchInputThresholdForGear)
         {
             return 0;
         }
@@ -112,7 +111,7 @@ public class BasicGearBox : MonoBehaviour
         clutchTorque = CalculateClutch(wheelRPM);
         
         // This is for power that goes to the drivetrain.
-        if (currentGear == 0)
+        if (currentGear == 0 || clutchVal >= clutchThreshold)
         {
             return 0;
         }
@@ -122,9 +121,9 @@ public class BasicGearBox : MonoBehaviour
             return -clutchTorque * reverseRatio * finalDriveRT;
         }
 
-        return clutchTorque * CurrentGearRatio() * finalDriveRT;
+        return clutchTorque * TotalRatio();
     }
-
+    
     public float ApplyGearRatio(float avgWheelRPM)
     {
         // This is for engine RPM snap.
@@ -203,14 +202,17 @@ public class BasicGearBox : MonoBehaviour
         float engineOmega = InputOmega();
         float gearboxOmega = wheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
 
-        clutchVal = Mathf.MoveTowards(clutchVal, clutchInput, Time.deltaTime * clutchSpeed); // TODO: This is for keyboard. Will be extended for auto cluthc in the future.
+        if (clutchInput >= 0.1f)
+            clutchVal = 1f;
+        else
+            clutchVal = Mathf.MoveTowards(clutchVal, 0, Time.deltaTime * clutchSpeed); // TODO: For manual that's better. But don't forget to implement auto gear
 
         float clutchEngage = 1f - clutchVal;
         float deltaOmega = engineOmega - gearboxOmega;
         float torque = deltaOmega * clutchStiffness;
-        float maxTorque = clutchTorqueMax * clutchEngage;
+        float maxTorque = Mathf.Abs(basicEngine.currentEngineTorque) * clutchEngage;
 
-        return Mathf.Clamp(torque, 0, maxTorque);
+        return Mathf.Clamp(torque, -maxTorque, maxTorque);
     }
 
     public float GetFinalDrive()
@@ -231,5 +233,10 @@ public class BasicGearBox : MonoBehaviour
     public bool GetJustShifted()
     {
         return justShifted;
+    }
+
+    public float GetClutchThreshold()
+    {
+        return clutchThreshold;
     }
 }
