@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class BasicDrivetrain : MonoBehaviour
 {
+    Rigidbody rb;
+
     BasicGearBox basicGearBox;
 
     IDifferential rearDiff;
@@ -24,7 +26,7 @@ public class BasicDrivetrain : MonoBehaviour
     enum DifferentialType { Open, Locked, LSD }
 
     public float avgDrivenWheelRPM { get; private set; }
-    float downstreamTorque;
+    public float downstreamTorque { get; private set; }
 
     void Awake()
     {
@@ -33,6 +35,7 @@ public class BasicDrivetrain : MonoBehaviour
 
     void Start()
     {
+        rb = GetComponent<Rigidbody>();
         basicGearBox = GetComponent<BasicGearBox>();
     }
 
@@ -57,7 +60,6 @@ public class BasicDrivetrain : MonoBehaviour
                 break;
         }
     }
-
     public void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
 out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque, out float rightRearTorque)
     {
@@ -73,11 +75,13 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
             case DrivetrainType.RWD:
                 avgDrivenWheelRPM = (leftRearRPM + rightRearRPM) * distEvenly;
                 rearDiff.DistributeTorque(wheelTorque, leftRearRPM, rightRearRPM, out leftRearTorque, out rightRearTorque);
+                downstreamTorque = leftRearTorque + rightRearTorque;
                 break;
             
             case DrivetrainType.FWD:
                 avgDrivenWheelRPM = (leftFrontRPM + rightFrontRPM) * distEvenly;
                 frontDiff.DistributeTorque(wheelTorque, leftFrontRPM, rightFrontRPM, out leftFrontTorque, out rightFrontTorque);
+                downstreamTorque = leftFrontTorque + rightFrontTorque;
                 break;
 
             case DrivetrainType.AWD: // This calls three methots because center distributes front and rear, then those methots split torque evenly.
@@ -86,6 +90,7 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
                 centerDiff.DistributeTorque(wheelTorque, leftFrontRPM + rightFrontRPM, leftRearRPM + rightRearRPM, out frontTorque, out rearTorque);
                 frontDiff.DistributeTorque(frontTorque, leftFrontRPM, rightFrontRPM, out leftFrontTorque, out rightFrontTorque);
                 rearDiff.DistributeTorque(rearTorque, leftRearRPM, rightRearRPM, out leftRearTorque, out rightRearTorque);
+                downstreamTorque = leftFrontTorque + rightFrontTorque + leftRearTorque + rightRearTorque;
                 break;
             
             default:
@@ -94,28 +99,7 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
         }
     }
 
-    public float CalculateDownstramTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM)
-    {
-        switch (driveType)
-        {
-            case DrivetrainType.RWD:
-                return downstreamTorque = rearDiff.DiffLoad(leftRearRPM, rightRearRPM);
-
-            case DrivetrainType.FWD:
-                return downstreamTorque = frontDiff.DiffLoad(leftFrontRPM, rightFrontRPM);
-            
-            case DrivetrainType.AWD:
-                float rearLoad = rearDiff.DiffLoad(leftRearRPM, rightRearRPM);
-                float frontLoad = frontDiff.DiffLoad(leftFrontRPM, rightFrontRPM);
-                downstreamTorque = centerDiff.DiffLoad(frontLoad, rearLoad);
-                return downstreamTorque;
-
-            default:
-                return 0f;
-        }
-    }
-
-    public float DrivenWheelRadius(float frontRadius, float rearRadius)
+    public float DrivenWheelRadius(float frontRadius, float rearRadius) // TODO: Not used yet
     {
         float divide = 0.5f;
         return driveType switch
@@ -131,23 +115,6 @@ out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque,
     {
         // inputTorque is ApplyTorque().
         return inputTorque * efficiency;
-    }
-
-    public float DrivetrainLoad()
-    {
-        if (basicGearBox.currentGear == 0)
-        {
-            return 0f;
-        }
-
-        float totalRatio = basicGearBox.TotalRatio();
-
-        if (Mathf.Abs(totalRatio) < 0.0001f)
-        {
-            return 0f;
-        } 
-        
-        return downstreamTorque / totalRatio;
     }
 
     void BuildDriveTrain()
