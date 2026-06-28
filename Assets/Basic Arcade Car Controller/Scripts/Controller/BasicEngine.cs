@@ -13,6 +13,7 @@ public class BasicEngine : MonoBehaviour
     [SerializeField] float engineTorque = 1500f;
     [SerializeField] float engineMaxRPM = 7000f;
     [SerializeField] float engineIdleRPM = 1000f;
+    [SerializeField] float motorBrake = 1000f;
 
     [Header("Engine Inertia Settings")]
     [SerializeField] float engineInertia = 10f;
@@ -79,30 +80,36 @@ public class BasicEngine : MonoBehaviour
         currentEngineTorque = CalculateTorque(throttle);
         float frictionTorque = baseFriction + friction * (currentRPM / engineMaxRPM);
 
-        bool disconnected = basicGearBox.currentGear == 0 || basicGearBox.clutchInput >= 0.1f;
+        bool disconnected = basicGearBox.currentGear == 0 || basicGearBox.clutchVal >= basicGearBox.GetClutchThreshold();
+
         float totalRatio = basicGearBox.TotalRatio();
-        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? carBody.mass * basicCarController.driveWheels[0].radius
-        * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f; //  basicCarController.driveWheels[0].radius * (totalRatio * totalRatio)
-        float drivetrainload = disconnected ? 0f : basicDrivetrain.DrivetrainLoad();
-        float angularAcceleration = (currentEngineTorque - frictionTorque - drivetrainload) / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
+        // TODO: 4 is wheel count. Find more efficient way to count wheels!!
+        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? (carBody.mass / 4) * basicCarController.driveWheels[0].radius
+        * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f;
+
+        float clutchTorque = disconnected ? 0f : basicGearBox.clutchTorque;
+        float netTorque = currentEngineTorque - frictionTorque - clutchTorque;
+        float angularAcceleration = netTorque / (engineInertia + reflectedInertia + basicGearBox.GearboxInertia());
 
         float deltaRPM = angularAcceleration * (60 / (2f * Mathf.PI)) * Time.fixedDeltaTime;
+
+        Debug.Log("Reflected Inertia: " + reflectedInertia);
 
         float scaleJitter = 0.5f;
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
         
-        if (basicGearBox.currentGear != 0 && basicGearBox.clutchVal < 0.1f && basicGearBox.GetJustShifted())
+        if (basicGearBox.currentGear != 0 && basicGearBox.clutchVal < basicGearBox.GetClutchThreshold()) // && basicGearBox.GetJustShifted()
         {
-            float targetRPM = basicGearBox.ApplyGearRatio(basicDrivetrain.avgDrivenWheelRPM) * 60f / (2f * Mathf.PI);
+            float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM) * 60f / (2f * Mathf.PI);
             float rpmSnapSpeed = 10f;
             currentRPM = Mathf.Lerp(currentRPM, targetRPM, Time.fixedDeltaTime * rpmSnapSpeed);
-            
+           
             float timeThreshold = 0.2f;
             if (Time.time - basicGearBox.lastShiftTime > timeThreshold)
                 basicGearBox.SetJustShifted(false);
         }
-
+    
         if (currentRPM < engineIdleRPM && throttle < 0.01f && disconnected)
         {
             currentRPM = engineIdleRPM;
@@ -120,8 +127,8 @@ public class BasicEngine : MonoBehaviour
 
     float CalculateTorque(float throttle)
     {
-        float engineSpeedFactor = Mathf.InverseLerp(0, engineMaxRPM, currentRPM);
-        float currentMotorTorque = Mathf.Lerp(engineTorque, 0, engineSpeedFactor);
+        float motorBrakeVal = CalculateMotorBrake(throttle);
+
         float t = Mathf.InverseLerp(0, engineMaxRPM, currentRPM);
         float accelMultiplier = Mathf.Clamp01(torqueCurve.Evaluate(t));
 
@@ -130,8 +137,21 @@ public class BasicEngine : MonoBehaviour
         float multiplier = 0.1f;
         float idleTorque = currentRPM <= engineIdleRPM + idleBoostThreshold ? engineTorque * multiplier * idleFactor : 0f;
 
-        float totalTorque = throttle * currentMotorTorque * accelMultiplier;
-        return totalTorque + idleTorque;
+        float totalTorque = throttle * engineTorque * accelMultiplier;
+        return totalTorque + idleTorque - motorBrakeVal;
+    }
+
+    // There are also other mechanical resistans that effect the the inertia. CalculateMotorBrake will handle that.
+    float CalculateMotorBrake(float throttle)
+    {
+        if (throttle < 0.1f)
+        {
+            float brakeTorque = motorBrake * (currentRPM / engineMaxRPM);
+
+            return brakeTorque;
+        }
+
+        return 0;
     }
 
     void IgniteEngine()
