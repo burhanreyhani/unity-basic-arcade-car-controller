@@ -14,6 +14,7 @@ public class UI : MonoBehaviour
     public TMP_Text nitroText;
     public TMP_Text rpmText;
     public TMP_Text engineTorque;
+    public TMP_Text clutchVal;
 
     void Start()
     {
@@ -33,7 +34,7 @@ public class UI : MonoBehaviour
             speedText.text = "Speed: " + basicCarController.carSpeedKmh.ToString("F1") + " KM/H";
 
         if (engineTorque != null)
-            engineTorque.text = "Engine Torque: " + basicEngine.currentEngineTorque;
+            engineTorque.text = "Engine Torque: " + basicEngine.currentEngineTorque.ToString("F1");
 
         if (gearText != null)
         {
@@ -45,11 +46,16 @@ public class UI : MonoBehaviour
             else
                 gearText.text = "Gear: N";
             */
-            gearText.text = "Gear: " + basicGearBox.currentGear;
+            gearText.text = "Gear: " + basicGearBox.currentGear.ToString();
         }
 
         if (rpmText != null)
-            rpmText.text = "RPM: " + basicEngine.currentRPM;
+            rpmText.text = "RPM: " + basicEngine.currentRPM.ToString();
+
+        if (clutchVal != null)
+        {
+            clutchVal.text = "Clutch Value: " + basicGearBox.clutchVal.ToString("F1");
+        }
     }
 
     void NitroAmount()

@@ -176,7 +176,7 @@
                 {
                     "name": "",
                     "id": "a7267824-42ec-4716-8c13-832b1c93f056",
-                    "path": "<Keyboard>/shift",
+                    "path": "<Keyboard>/alt",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -187,7 +187,7 @@
                 {
                     "name": "",
                     "id": "9d556f01-ff47-4a8c-acf0-4f35a605b791",
-                    "path": "<Keyboard>/rightShift",
+                    "path": "<Keyboard>/alt",
                     "interactions": "",
                     "processors": "",
                     "groups": "",

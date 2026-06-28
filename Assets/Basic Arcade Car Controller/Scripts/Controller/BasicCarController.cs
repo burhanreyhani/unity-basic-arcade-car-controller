@@ -5,8 +5,8 @@ public class BasicCarController : MonoBehaviour
 {
     [HideInInspector] public WheelCollider[] allWheels;
 
-    //BasicEngine basicEngine;
-    //BasicGearBox basicGearBox;
+    BasicEngine basicEngine;
+    BasicGearBox basicGearBox;
     BasicDrivetrain basicDrivetrain;
 
     public WheelCollider[] driveWheels;
@@ -68,6 +68,8 @@ public class BasicCarController : MonoBehaviour
 
     public float carSpeedKmh { get; private set; }
 
+    //public float avgWheelRPM { get; private set; }
+
     void Awake()
     {
         carInputs = new Controls();
@@ -77,8 +79,8 @@ public class BasicCarController : MonoBehaviour
     {
         carBody = GetComponent<Rigidbody>();
         allWheels = GetComponentsInChildren<WheelCollider>();
-        //basicEngine = GetComponent<BasicEngine>();
-        //basicGearBox = GetComponent<BasicGearBox>();
+        basicEngine = GetComponent<BasicEngine>();
+        basicGearBox = GetComponent<BasicGearBox>();
         basicDrivetrain = GetComponent<BasicDrivetrain>();
 
         FindHbWheels();
@@ -138,7 +140,8 @@ public class BasicCarController : MonoBehaviour
 
         //float torque = basicGearBox.ApplyTorque(avgWheelRPM) / 2;
 
-        if (throttle > 0 && carSpeedKmh <= maxSpeed && !wantsToGoForward)
+        //if (throttle > 0 && carSpeedKmh <= maxSpeed && !wantsToGoForward)
+        if (basicEngine.currentRPM > 0 && basicGearBox.currentGear != 0 && basicGearBox.clutchVal < 1f) // TODO: This part need adjustments
         {
             foreach (var driveWheel in driveWheels)
             {
@@ -146,6 +149,7 @@ public class BasicCarController : MonoBehaviour
                 //driveWheel.motorTorque = throttle > 0.1 ? basicEngine.currentRPM : 0;
                 //driveWheel.motorTorque = torque;
                 //carBody.AddForce(transform.forward * basicDrivetrain.avgDrivenWheelRPM);
+                //carBody.AddForce(transform.forward * torque);
                 driveWheel.motorTorque = 0.001f;
             }
         }

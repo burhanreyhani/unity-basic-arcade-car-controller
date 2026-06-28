@@ -5,6 +5,7 @@ public class BasicDrivetrain : MonoBehaviour
     Rigidbody rb;
 
     BasicGearBox basicGearBox;
+    BasicCarController basicCarController;
 
     IDifferential rearDiff;
     IDifferential frontDiff;
@@ -37,6 +38,7 @@ public class BasicDrivetrain : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         basicGearBox = GetComponent<BasicGearBox>();
+        basicCarController = GetComponent<BasicCarController>();
     }
 
     void SetDifferential(IDifferential diff, DiffPosition position)
@@ -63,7 +65,7 @@ public class BasicDrivetrain : MonoBehaviour
     public void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
 out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque, out float rightRearTorque)
     {
-        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(avgDrivenWheelRPM));
+        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(basicCarController.avgWheelRPM));
         leftFrontTorque = rightFrontTorque = leftRearTorque = rightRearTorque = 0f;
 
         float distEvenly = 0.5f;

@@ -22,16 +22,14 @@ public class BasicWheel : MonoBehaviour
     }
 
     void FixedUpdate()
-    {
+    {   
         basicDrivetrain.DistributeTorque(frontLeftRPM, frontRightRPM, rearLeftRPM, rearRightRPM,
         out float frontLeftTorque, out float frontRightTorque, out float rearLeftTorque, out float rearRightTorque);
-        basicDrivetrain.CalculateDownstramTorque(frontLeftRPM, frontRightRPM, rearLeftRPM, rearRightRPM);
-        basicDrivetrain.DrivenWheelRadius(frontWheelRadius, rearWheelRadius);
 
-        CaluclateWheelRPM(frontLeftRPM, frontWheelInertia, frontLeftTorque);
-        CaluclateWheelRPM(frontRightRPM, frontWheelInertia, frontRightTorque);
-        CaluclateWheelRPM(rearLeftRPM, frontWheelInertia, rearLeftTorque);
-        CaluclateWheelRPM(rearRightRPM, frontWheelInertia, rearRightTorque);
+        float flNetTorque = CaluclateWheelRPM(frontLeftRPM, frontWheelInertia, frontLeftTorque);
+        float frNetTorque = CaluclateWheelRPM(frontRightRPM, frontWheelInertia, frontRightTorque);
+        float rlNetTorque = CaluclateWheelRPM(rearLeftRPM, rearWheelInertia, rearLeftTorque);
+        float rrNetTorque = CaluclateWheelRPM(rearRightRPM, rearWheelInertia, rearRightTorque);
 
         rb.AddForce(transform.forward * frontLeftTorque);
         rb.AddForce(transform.forward * frontRightTorque);
