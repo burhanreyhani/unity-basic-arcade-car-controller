@@ -8,7 +8,6 @@ public class EngineSoundByGear : MonoBehaviour
     [SerializeField] AudioSource gearSource;
 
     [Header("Pitch Settings")]
-    public float idlePitch = 0.9f;
     public float minGearPitch = 0.95f;
     public float maxGearPitch = 2.4f;
     public float pitchSmooth = 3f;
@@ -30,10 +29,10 @@ public class EngineSoundByGear : MonoBehaviour
     {
         
         float speed01 = Mathf.Clamp01(engine.currentRPM / engine.GetMaxRPM());
-        float targetPitch = Mathf.Lerp(minGearPitch, maxGearPitch, speed01);
-        float targetVolume = Mathf.Lerp(0, maxVolume, speed01);
+        float targetPitch = Mathf.MoveTowards(minGearPitch, maxGearPitch, speed01);
+        float targetVolume = Mathf.MoveTowards(0, maxVolume, speed01);
 
-        gearSource.pitch = Mathf.Lerp(gearSource.pitch, targetPitch, pitchSmooth * Time.deltaTime);
-        gearSource.volume = Mathf.Lerp(gearSource.volume, targetVolume, fadeSpeed * Time.deltaTime);
+        gearSource.pitch = Mathf.MoveTowards(gearSource.pitch, targetPitch, pitchSmooth * Time.deltaTime);
+        gearSource.volume = Mathf.MoveTowards(gearSource.volume, targetVolume, fadeSpeed * Time.deltaTime);
     }
 }
