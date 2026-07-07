@@ -9,32 +9,33 @@ public class BasicGearBox : MonoBehaviour
     [SerializeField] float gearboxRadius = 0.5f;
 
     [Header("Gearbox Ratio Settings")]
-    [SerializeField] float[] gearRatios = { 0, 3.9f, 3.1f, 2.4f, 1.5f, 0.9f };
+    [SerializeField] float[] gearRatios = { 1, 3.9f, 3.1f, 2.4f, 1.5f, 0.9f };
     [SerializeField] float reverseRatio = 2.1f;
     [SerializeField] float finalDriveRT = 4.1f;
     [SerializeField] float gearUpRPM = 4500f;
     [SerializeField] float gearDownRPM = 1400f;
 
     [Header("Clutch Settings")]
-    [SerializeField] float clutchStiffness = 50f;
+    [SerializeField] float clutchStiffness = 16000f;
     [SerializeField] float clutchSpeed = 5f;
+    [SerializeField] float clutchResistance = 0.072f;
 
     public InputMap inputMap;
 
     public float lastShiftTime { get; private set; }
     public int currentGear { get; private set; }
     public float clutchVal { get; private set; }
-    float clutchInput;
-
     public float clutchTorque { get; private set; }
-    float clutchInputThresholdForGear = 0.9f;
-    float clutchThreshold = 0.35f;
+    
+    float clutchInputThresholdForGear = 0.99f; // TODO: this can be one value.
+    float clutchThreshold = 0.99f; // TODO: this can be one value.
 
     bool gearUp;
     bool gearDown;
 
     bool justShifted;
 
+    float clutchInput;
 
     void Awake()
     {
@@ -59,6 +60,7 @@ public class BasicGearBox : MonoBehaviour
     void Update()
     {
         clutchInput = inputMap.Drive.Clutch.ReadValue<float>();
+        //clutchInput = clutchValue;
 
         gearUp = inputMap.Drive.GearUp.WasPressedThisFrame();
         gearDown = inputMap.Drive.GearDown.WasPressedThisFrame();
@@ -139,7 +141,7 @@ public class BasicGearBox : MonoBehaviour
             return -wheelOmega * reverseRatio * finalDriveRT;
         }
 
-        return wheelOmega * CurrentGearRatio() * finalDriveRT;
+        return wheelOmega * TotalRatio() * 60f / (2f * Mathf.PI);
     }
 
     float InputOmega()
@@ -196,23 +198,34 @@ public class BasicGearBox : MonoBehaviour
         return 0;
     }
     */
-    
+
+    // TODO: Clutch is broken.
     float CalculateClutch(float wheelRPM)
     {
         float engineOmega = InputOmega();
-        float gearboxOmega = wheelRPM * 2f * Mathf.PI / 60f * TotalRatio();
+        float drivetrainOmega = wheelRPM * 2f * Mathf.PI / 60 * TotalRatio();
 
         if (clutchInput >= 0.1f)
+        {
             clutchVal = 1f;
+        }
         else
-            clutchVal = Mathf.MoveTowards(clutchVal, 0, Time.deltaTime * clutchSpeed); // TODO: For manual that's better. But don't forget to implement auto gear
+        {
+            clutchVal = Mathf.MoveTowards(clutchVal, 0, Time.fixedDeltaTime * clutchSpeed); // TODO: For manual that's better. But don't forget to implement auto gear
+        }
+        
+        if (currentGear == 0 || basicEngine.currentRPM <= 0f)
+        {
+            return 0f; 
+        }
 
-        float clutchEngage = 1f - clutchVal;
-        float deltaOmega = engineOmega - gearboxOmega;
-        float torque = deltaOmega * clutchStiffness;
-        float maxTorque = Mathf.Abs(basicEngine.currentEngineTorque) * clutchEngage;
+        float clutchEngage = 1 - clutchVal;
+        float deltaOmega = engineOmega - drivetrainOmega;
 
-        return Mathf.Clamp(torque, -maxTorque, maxTorque);
+        float clutchTorqueMax = clutchStiffness * clutchEngage * clutchResistance;
+        float rawFeedbackForce = deltaOmega * clutchStiffness * clutchEngage;
+
+        return Mathf.Clamp(rawFeedbackForce, -clutchTorqueMax, clutchTorqueMax);
     }
 
     public float GetFinalDrive()
