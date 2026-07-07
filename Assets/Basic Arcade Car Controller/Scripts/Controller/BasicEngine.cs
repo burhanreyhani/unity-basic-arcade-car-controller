@@ -29,6 +29,9 @@ public class BasicEngine : MonoBehaviour
     [SerializeField] float startEngineTorque = 100f;
     [SerializeField] float stallRPM = 900f;
 
+    [Header("Redline settings")]
+    [SerializeField] float revLimiterThreshold = 500f;
+
     bool isRunning = false;
     bool ignite = false;
 
@@ -122,7 +125,7 @@ public class BasicEngine : MonoBehaviour
         
         if (currentRPM > engineMaxRPM)
         {
-            currentRPM -= 500f;
+            currentRPM -= revLimiterThreshold;
         }
     }
 
