@@ -7,7 +7,6 @@ public class BasicCarController : MonoBehaviour
 
     BasicEngine basicEngine;
     BasicGearBox basicGearBox;
-    BasicDrivetrain basicDrivetrain;
 
     public WheelCollider[] driveWheels;
     public WheelCollider[] steeringWheels;
@@ -50,6 +49,8 @@ public class BasicCarController : MonoBehaviour
 
     public Controls carInputs { get; private set; }
     public float avgWheelRPM { get; private set; }
+    public float carSpeedKmh { get; private set; }
+
     Rigidbody carBody;
 
     float forwardSpeed;
@@ -66,9 +67,6 @@ public class BasicCarController : MonoBehaviour
     bool wantsToGoForward;
     bool wantsToGoBackward;
 
-    public float carSpeedKmh { get; private set; }
-
-    //public float avgWheelRPM { get; private set; }
 
     void Awake()
     {
@@ -81,7 +79,6 @@ public class BasicCarController : MonoBehaviour
         allWheels = GetComponentsInChildren<WheelCollider>();
         basicEngine = GetComponent<BasicEngine>();
         basicGearBox = GetComponent<BasicGearBox>();
-        basicDrivetrain = GetComponent<BasicDrivetrain>();
 
         FindHbWheels();
     }
@@ -101,6 +98,7 @@ public class BasicCarController : MonoBehaviour
         ResetWheelForces();
 
         float throttle = carInputs.Drive.Throttle.ReadValue<float>();
+        //float throttle = basicGearBox.throttleValue;
         float brakeReverse = carInputs.Drive.BrakeReverse.ReadValue<float>();
         float steer = carInputs.Drive.Steering.ReadValue<float>();
         float handBrake = carInputs.Drive.Handbrake.ReadValue<float>();
@@ -117,6 +115,11 @@ public class BasicCarController : MonoBehaviour
 
         float targetSteerAngle = CalculateSteerAngle(steer);
         currentSteerAngle = Mathf.MoveTowards(currentSteerAngle, targetSteerAngle + CounterSteering(), steeringSpeed * Time.fixedDeltaTime);
+        
+        if (Mathf.Abs(currentSteerAngle) >= Mathf.Abs(targetSteerAngle))
+        {
+            carBody.AddTorque(transform.forward * steer * 10f, ForceMode.Impulse);
+        }
 
         Accelerate(throttle);
         Brake(brakeReverse);

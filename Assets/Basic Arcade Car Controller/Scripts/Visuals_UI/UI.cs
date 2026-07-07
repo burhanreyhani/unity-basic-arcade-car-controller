@@ -34,7 +34,7 @@ public class UI : MonoBehaviour
             speedText.text = "Speed: " + basicCarController.carSpeedKmh.ToString("F1") + " KM/H";
 
         if (engineTorque != null)
-            engineTorque.text = "Engine Torque: " + basicEngine.currentEngineTorque.ToString("F1");
+            engineTorque.text = "Engine Torque: " + basicEngine.currentNetEngTorque.ToString("F1");
 
         if (gearText != null)
         {

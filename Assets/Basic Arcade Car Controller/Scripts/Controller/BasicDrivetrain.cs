@@ -22,7 +22,6 @@ public class BasicDrivetrain : MonoBehaviour
     [SerializeField] float lockStrength = 0.5f;
 
     enum DrivetrainType { RWD, FWD, AWD }
-
     enum DiffPosition { Rear, Front, Center }
     enum DifferentialType { Open, Locked, LSD }
 
@@ -65,7 +64,7 @@ public class BasicDrivetrain : MonoBehaviour
     public void DistributeTorque(float leftFrontRPM, float rightFrontRPM, float leftRearRPM, float rightRearRPM,
 out float leftFrontTorque, out float rightFrontTorque, out float leftRearTorque, out float rightRearTorque)
     {
-        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(basicCarController.avgWheelRPM));
+        float wheelTorque = DrivetrainEfficiency(basicGearBox.ApplyTorque(avgDrivenWheelRPM));
         leftFrontTorque = rightFrontTorque = leftRearTorque = rightRearTorque = 0f;
 
         float distEvenly = 0.5f;
