@@ -66,8 +66,7 @@ public class BasicCarController : MonoBehaviour
 
     bool wantsToGoForward;
     bool wantsToGoBackward;
-
-
+ 
     void Awake()
     {
         carInputs = new Controls();
@@ -148,11 +147,11 @@ public class BasicCarController : MonoBehaviour
         {
             foreach (var driveWheel in driveWheels)
             {
-                //driveWheel.motorTorque = currentMotorTorque * accelMultiplier;
+                //driveWheel.motorTorque = torque;
                 //driveWheel.motorTorque = throttle > 0.1 ? basicEngine.currentRPM : 0;
                 //driveWheel.motorTorque = torque;
                 //carBody.AddForce(transform.forward * basicDrivetrain.avgDrivenWheelRPM);
-                //carBody.AddForce(transform.forward * torque);
+                //carBody.AddForce(transform.forward * torque * 0.85f);
                 driveWheel.motorTorque = 0.001f;
             }
         }

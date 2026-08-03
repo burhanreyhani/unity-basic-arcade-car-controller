@@ -20,7 +20,7 @@ public class BasicGearBox : MonoBehaviour
     [SerializeField] float clutchSpeed = 5f;
     [SerializeField] float clutchResistance = 0.072f;
 
-    public InputMap inputMap;
+    IInputProvider inputProvider;
 
     public float lastShiftTime { get; private set; }
     public int currentGear { get; private set; }
@@ -39,17 +39,7 @@ public class BasicGearBox : MonoBehaviour
 
     void Awake()
     {
-        inputMap = new InputMap();
-    }
-
-    void OnEnable()
-    {
-        inputMap.Enable();
-    }
-
-    void OnDisable()
-    {
-        inputMap.Disable();
+        inputProvider = GetComponentInChildren<IInputProvider>();
     }
 
     void Start()
@@ -59,11 +49,10 @@ public class BasicGearBox : MonoBehaviour
 
     void Update()
     {
-        clutchInput = inputMap.Drive.Clutch.ReadValue<float>();
         //clutchInput = clutchValue;
 
-        gearUp = inputMap.Drive.GearUp.WasPressedThisFrame();
-        gearDown = inputMap.Drive.GearDown.WasPressedThisFrame();
+        gearUp = inputProvider.GearUp;
+        gearDown = inputProvider.GearDown;
 
         if (clutchVal >= clutchInputThresholdForGear && gearUp)
         {
@@ -96,6 +85,7 @@ public class BasicGearBox : MonoBehaviour
             ShiftDown();
         }
         */
+        clutchInput = inputProvider.Clutch;
     }
 
     public float GearboxInertia()
@@ -104,8 +94,9 @@ public class BasicGearBox : MonoBehaviour
         {
             return 0;
         }
-
-        return 0.5f * gearboxMass * (gearboxRadius * gearboxRadius);
+        
+        float scaleInertia = 0.5f;
+        return scaleInertia * gearboxMass * (gearboxRadius * gearboxRadius);
     }
 
     public float ApplyTorque(float wheelRPM)
@@ -120,7 +111,7 @@ public class BasicGearBox : MonoBehaviour
 
         if (currentGear == -1)
         {
-            return -clutchTorque * reverseRatio * finalDriveRT;
+            return -clutchTorque * TotalRatio();
         }
 
         return clutchTorque * TotalRatio();
@@ -138,7 +129,7 @@ public class BasicGearBox : MonoBehaviour
 
         if (currentGear == -1)
         {
-            return -wheelOmega * reverseRatio * finalDriveRT;
+            return -wheelOmega * TotalRatio();
         }
 
         return wheelOmega * TotalRatio() * 60f / (2f * Mathf.PI);
@@ -182,7 +173,11 @@ public class BasicGearBox : MonoBehaviour
     public float TotalRatio()
     {
         if (currentGear == 0) return 0;
-        if (currentGear == -1) return reverseRatio * finalDriveRT;
+
+        if (currentGear == -1)
+        {
+            return reverseRatio * finalDriveRT;        
+        }
 
         return CurrentGearRatio() * finalDriveRT;
     }
@@ -226,6 +221,16 @@ public class BasicGearBox : MonoBehaviour
         float rawFeedbackForce = deltaOmega * clutchStiffness * clutchEngage;
 
         return Mathf.Clamp(rawFeedbackForce, -clutchTorqueMax, clutchTorqueMax);
+    }
+
+    public bool isReversing() // Not used but might be needed.
+    {
+        if (currentGear == -1)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public float GetFinalDrive()

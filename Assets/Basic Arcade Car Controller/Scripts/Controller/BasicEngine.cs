@@ -2,10 +2,11 @@ using UnityEngine;
 
 public class BasicEngine : MonoBehaviour
 {
-    Rigidbody carBody;
+    IInputProvider inputProvider;
+    Rigidbody rb;
 
-    BasicCarController basicCarController;
     BasicGearBox basicGearBox;
+    BasicWheel basicWheel;
 
     [Header("Engine Stats")]
     [SerializeField] AnimationCurve torqueCurve;
@@ -38,22 +39,27 @@ public class BasicEngine : MonoBehaviour
     public float currentRPM { get; private set; }
     public float currentEngineTorque { get; private set; }
     public float currentNetEngTorque { get; private set; }
-    public float throttleVal { get; private set; }
+    public float speedKmh { get; private set; }
+
+    void Awake()
+    {
+        inputProvider = GetComponentInChildren<IInputProvider>();
+    }
 
     void Start()
     {
-        carBody = GetComponent<Rigidbody>();
-        basicCarController = GetComponent<BasicCarController>();
+        rb = GetComponent<Rigidbody>();
+        basicWheel = GetComponent<BasicWheel>();
         basicGearBox = GetComponent<BasicGearBox>();
     }
 
     void FixedUpdate()
     {
-        throttleVal = basicCarController.carInputs.Drive.Throttle.ReadValue<float>(); // TODO: Look for more efficient methot.
-        //float throttleVal = basicGearBox.throttleValue;
+        float throttle = inputProvider.Throttle;
+        float startEngine = inputProvider.Ignition;
+        float killEngine = inputProvider.KillEngine;
 
-        float startEngine = basicGearBox.inputMap.Drive.Ignition.ReadValue<float>();
-        float killEngine = basicGearBox.inputMap.Drive.KillEngine.ReadValue<float>();
+        speedKmh = rb.linearVelocity.magnitude * 3.6f;
 
         if (startEngine > 0.1f)
         {
@@ -69,7 +75,7 @@ public class BasicEngine : MonoBehaviour
             KillEngine();
         }
 
-        EnegineAngularAcceleration(throttleVal);
+        EnegineAngularAcceleration(throttle);
     }
 
     void EnegineAngularAcceleration(float throttle)
@@ -88,8 +94,8 @@ public class BasicEngine : MonoBehaviour
         float totalRatio = basicGearBox.TotalRatio();
         float wheelInertia = 20f; // This value will come from different wheel script. Temporarily here.
         // Car's mass already calculated by the physic engine itself. So instead, adding wheel inertia will be more accurate I guess?
-        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? wheelInertia * basicCarController.driveWheels[0].radius
-        * basicCarController.driveWheels[0].radius / (totalRatio * totalRatio) : 0f;
+        float reflectedInertia = (!disconnected && Mathf.Abs(totalRatio) > 0.0001f) ? wheelInertia * 0.37f
+        * 0.37f / (totalRatio * totalRatio) : 0f; // TODO: 0.37f is radius of the wheel. This info will come from wheel or diff script.
 
         currentNetEngTorque = currentEngineTorque - frictionTorque;
 
@@ -105,7 +111,7 @@ public class BasicEngine : MonoBehaviour
         float clutchThreshold = 0.5f;
         if (basicGearBox.currentGear != 0 && basicGearBox.clutchVal < clutchThreshold)
         {
-            float targetRPM = basicGearBox.ApplyGearRatio(basicCarController.avgWheelRPM);
+            float targetRPM = basicGearBox.ApplyGearRatio(basicWheel.avgWheelRPM);
             float rpmSnapSpeed = 10f;
             currentRPM = Mathf.Lerp(currentRPM, targetRPM, Time.fixedDeltaTime * rpmSnapSpeed);
            

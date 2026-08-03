@@ -69,7 +69,7 @@ public class CustomController : MonoBehaviour
     [SerializeField] LayerMask Drivable;
 
     [Header("Grip Config")]
-    [SerializeField] float rollingResistanceCo = 0.02f;
+    //[SerializeField] float rollingResistanceCo = 0.02f;
     [SerializeField] float latMu = 0.5f;
     [SerializeField] float longMu = 0.8f;
 
@@ -82,8 +82,8 @@ public class CustomController : MonoBehaviour
     [SerializeField] float timer;
     [SerializeField] float groundedTimer;
 
-    float torque = 7500f;
-    [SerializeField] float rlxLong = 0.7f;
+    [SerializeField] float torque = 7500f;
+    //[SerializeField] float rlxLong = 0.7f;
 
     void Awake()
     {
@@ -145,8 +145,8 @@ public class CustomController : MonoBehaviour
 
         UpdateSuspensions();
 
-        //SleepTimer();
-        //AwakeRB();
+        SleepTimer();
+        AwakeRB(throttle);
     }
 
     void ApplyThrottle(float throttle, Vector3 contactPoint, bool grounded)
@@ -162,56 +162,45 @@ public class CustomController : MonoBehaviour
         rb.AddTorque(Vector3.up * steer * 10000, ForceMode.Force);
     }
 
-    void SimulateGrip(Suspension suspension, Vector3 contactPoint, Vector3 normalHit)
+    void SimulateGrip(Suspension suspension, Vector3 normalHit)
     {
-        Vector3 wheelVel = rb.GetPointVelocity(contactPoint);
-        
-        Vector3 gravityForce = rb.mass * Physics.gravity;
-        Vector3 slopeForce = Vector3.ProjectOnPlane(gravityForce, normalHit);
+        Vector3 pointVel = rb.GetPointVelocity(transform.position);
 
-        float maxStaticFric = latMu * suspension.normalForce;
+        Vector3 latSlipDir = transform.right;
+        Vector3 longSlipDir = transform.forward;
 
-        int totalWheelCount = 4;
+        Vector3 latSurfaceDir = Vector3.ProjectOnPlane(latSlipDir, normalHit).normalized;
+        Vector3 longSurfaceDir = Vector3.ProjectOnPlane(longSlipDir, normalHit).normalized;
 
-        float stopThreshold = 0.3f;
-        if (rb.linearVelocity.magnitude < stopThreshold)
-        {
-            Vector3 distributedSlopeForce = slopeForce / totalWheelCount;
+        float latSpeed = Vector3.Dot(pointVel, latSurfaceDir);
+        float longSpeed = Vector3.Dot(pointVel, longSurfaceDir);
 
-            if (slopeForce.magnitude <= maxStaticFric)
-            {
-                rb.linearVelocity = Vector3.zero;
+        float distributedForce = (rb.mass / 4) + 25; // 4 is wheelCount, 25 is wheel mass
+        float maxLatForce = latSpeed * distributedForce / Time.fixedDeltaTime;
+        float maxLongForce = longSpeed * distributedForce / Time.fixedDeltaTime;
 
-                rb.AddForce(-distributedSlopeForce, ForceMode.Force);
-                return;
-            }
-        }
-        rb.angularVelocity = Vector3.zero;
-
-        Vector3 localVel = transform.InverseTransformDirection(wheelVel);
+        float totalSlip = Mathf.Sqrt(latSpeed * latSpeed + longSpeed * longSpeed);
+        float latRatio = totalSlip > 0 ? Mathf.Abs(latSpeed) / totalSlip : 0;
+        float longRatio = totalSlip > 0 ? Mathf.Abs(longSpeed) / totalSlip : 0;
 
         float latFriction = latMu * suspension.normalForce;
         float longFriction = longMu * suspension.normalForce;
 
-        Vector3 latVelocity = transform.TransformDirection(new Vector3(localVel.x, 0, 0));
-        Vector3 longVelocity = transform.TransformDirection(new Vector3(0, 0, localVel.z));
-        Vector3 longSurfaceVelocity = Vector3.ProjectOnPlane(longVelocity, normalHit);
-        Vector3 latSurfaceVelocity = Vector3.ProjectOnPlane(latVelocity, normalHit);
+        float allocatedLatFriction = latRatio * latFriction;
+        float allocatedLongFriction = longRatio * longFriction;
 
-        float latForceMag = Mathf.Min(latFriction * Time.fixedDeltaTime, rb.mass * latSurfaceVelocity.magnitude);
-        Vector3 latGrip  = latSurfaceVelocity.magnitude  > 0.0001f ? -latSurfaceVelocity * latForceMag : Vector3.zero;
+        float finalLatForceMagnitude = Mathf.Min(allocatedLatFriction, Mathf.Abs(maxLatForce)) * -Mathf.Sign(latSpeed);
+        float finalLongForceMagnitude = Mathf.Min(allocatedLongFriction, Mathf.Abs(maxLongForce)) * -Mathf.Sign(longSpeed);
 
-        Debug.DrawRay(contactPoint, latGrip, Color.blue);
+        Vector3 gripLat = latSurfaceDir * finalLatForceMagnitude;
+        Vector3 gripLong = longSurfaceDir * finalLongForceMagnitude;
 
-        float longForceMag = Mathf.Min(longFriction * Time.fixedDeltaTime, rb.mass * longSurfaceVelocity.magnitude);
-        Vector3 longGrip = longSurfaceVelocity.magnitude > 0.0001f ? -longSurfaceVelocity * longForceMag : Vector3.zero;
+        rb.AddForceAtPosition(gripLong + gripLat, transform.position, ForceMode.Force);
 
-        Debug.DrawRay(contactPoint, longGrip, Color.darkRed);
+        rb.angularVelocity = Vector3.zero;
 
-        float rollingResistance = rollingResistanceCo * suspension.normalForce;
-        Vector3 rollingForce = -wheelVel.normalized * Mathf.Min(rollingResistance * Time.fixedDeltaTime, rb.mass * wheelVel.magnitude);;
-
-        rb.AddForceAtPosition(longGrip + latGrip + rollingForce, contactPoint, ForceMode.Impulse);
+        Debug.DrawLine(transform.position, transform.position + gripLong, Color.blue);
+        Debug.DrawLine(transform.position, transform.position + gripLat, Color.red);
     }
 
     void UpdateSuspensions()
@@ -240,25 +229,25 @@ public class CustomController : MonoBehaviour
         if (flGrounded)
         {
             rb.AddForceAtPosition(frontLeftSuspension.up * (fls.normalForce + frontAntiRoll), frontLeftSuspension.position);            
-            SimulateGrip(fls, flContact, flHitNormal);
+            SimulateGrip(fls, flHitNormal);
         }
 
         if (frGrounded)
         {
             rb.AddForceAtPosition(frontRightSuspension.up * (frs.normalForce - frontAntiRoll), frontRightSuspension.position);
-            SimulateGrip(frs, frContact, frHitNormal);
+            SimulateGrip(frs, frHitNormal);
         }
 
         if (rlGrounded)
         {
             rb.AddForceAtPosition(rearLeftSuspension.up * (rls.normalForce + rearAntiRoll),  rearLeftSuspension.position);
-            SimulateGrip(rls, rlContact, rlHitNormal);
+            SimulateGrip(rls, rlHitNormal);
         }
 
         if (rrGrounded)
         {
             rb.AddForceAtPosition(rearRightSuspension.up * (rrs.normalForce - rearAntiRoll),  rearRightSuspension.position);
-            SimulateGrip(rrs, rrContact, rrHitNormal);
+            SimulateGrip(rrs, rrHitNormal);
         }
 
         WheelPosition(frontLeftWheel, frontLeftSuspension, fls);
@@ -315,11 +304,11 @@ public class CustomController : MonoBehaviour
         }
     }
 
-    void AwakeRB()
+    void AwakeRB(float throttle)
     {
         bool wheelGrounded = IsWheelGrounded();
 
-        if (!wheelGrounded || rb.linearVelocity.magnitude > 0.1f)
+        if (!wheelGrounded || throttle > 0.1f)
         {
             rb.WakeUp();
             isSleepingManual = false;

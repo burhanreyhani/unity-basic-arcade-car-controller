@@ -37,6 +37,8 @@ public class SimulateFriction : MonoBehaviour
     {
         AwakeRB();
         ApplyGrip();
+
+        if (!grounded) timer = 0f;
     }
 
     void ApplyGrip()
@@ -55,7 +57,7 @@ public class SimulateFriction : MonoBehaviour
 
             CalculateFriction();
             ApplyForce();
-            //SleepTimer();
+            SleepTimer();
 
             Debug.DrawRay(transform.position, -transform.up * rayLength, Color.green);
 
@@ -86,67 +88,38 @@ public class SimulateFriction : MonoBehaviour
     void ApplyForce()
     {
         if (!grounded) return;
-    
-        /*
-        Vector3 pointVel = rb.GetPointVelocity(transform.position);
-        Vector3 localVel = transform.InverseTransformDirection(pointVel);
-        
-        Vector3 latSlip = transform.TransformDirection(new Vector3(localVel.x, 0, 0));
-        Vector3 longSlip = transform.TransformDirection(new Vector3(0, 0, localVel.z));
-
-        Vector3 latSurfaceVelocity = Vector3.ProjectOnPlane(latSlip, normalHit);
-        Vector3 longSurfaceVelocity = Vector3.ProjectOnPlane(longSlip, normalHit);
-
-        Vector3 gripLat = -latSurfaceVelocity * friction;
-        Vector3 gripLong = -longSurfaceVelocity * friction;
-
-        rb.AddForceAtPosition(gripLat + gripLong, transform.position, ForceMode.Force);
-
-        Debug.DrawRay(transform.position - (transform.up * 0.5f), gripLat * 0.5f, Color.red);
-        Debug.DrawRay(transform.position - (transform.up * 0.5f), gripLong * 0.5f, Color.blue);
-
-        /*
-        Vector3 right = transform.right;
-        Vector3 forward = transform.forward;
-
-        Vector3 lateralVelocity = Vector3.Project(pointVel, right);
-        Vector3 forwardVelocity = Vector3.Project(pointVel, forward);
-        Vector3 slip = (forwardVelocity + lateralVelocity) / 2;
-
-        float lateralFriction = Vector3.Project(right, slip).magnitude * normalForce / Physics.gravity.magnitude / Time.fixedDeltaTime * muStatic;
-        rb.AddForceAtPosition(-Vector3.Project(slip, lateralVelocity).normalized * lateralFriction, hitPoint);
-        */
-
-        Vector3 gravityForce = rb.mass * Physics.gravity;
-        Vector3 slopeForce = Vector3.ProjectOnPlane(gravityForce, normalHit);
-
-        float maxStaticFric = muStatic * normalForce;
-
-        float stopThreshold = 0.01f;
-        if (rb.linearVelocity.magnitude < stopThreshold)
-        {
-            if (slopeForce.magnitude <= maxStaticFric)
-            {
-                rb.linearVelocity = Vector3.zero;
-
-                rb.AddForce(-slopeForce, ForceMode.Force);
-                return;
-            }
-        }
 
         Vector3 pointVel = rb.GetPointVelocity(transform.position);
-        Vector3 localVel = transform.InverseTransformDirection(pointVel);
 
-        Vector3 latSlip = transform.TransformDirection(new Vector3(localVel.x, 0, 0));
-        Vector3 longSlip = transform.TransformDirection(new Vector3(0, 0, localVel.z));
+        Vector3 latSlipDir = transform.right;
+        Vector3 longSlipDir = transform.forward;
 
-        Vector3 latSurfaceVelocity = Vector3.ProjectOnPlane(latSlip, normalHit);
-        Vector3 longSurfaceVelocity = Vector3.ProjectOnPlane(longSlip, normalHit);
+        Vector3 latSurfaceDir = Vector3.ProjectOnPlane(latSlipDir, normalHit).normalized;
+        Vector3 longSurfaceDir = Vector3.ProjectOnPlane(longSlipDir, normalHit).normalized;
 
-        Vector3 gripLat = -latSurfaceVelocity.normalized * friction;
-        Vector3 gripLong = -longSurfaceVelocity.normalized * friction;
+        float latSpeed = Vector3.Dot(pointVel, latSurfaceDir);
+        float longSpeed = Vector3.Dot(pointVel, longSurfaceDir);
 
-        rb.AddForceAtPosition(gripLong, transform.position, ForceMode.Force);
+        float maxLatForce = (latSpeed * rb.mass) / Time.fixedDeltaTime;
+        float maxLongForce = (longSpeed * rb.mass) / Time.fixedDeltaTime;
+
+        float totalSlip = Mathf.Sqrt(latSpeed * latSpeed + longSpeed * longSpeed);
+        float latRatio = totalSlip > 0 ? Mathf.Abs(latSpeed) / totalSlip : 0;
+        float longRatio = totalSlip > 0 ? Mathf.Abs(longSpeed) / totalSlip : 0;
+
+        float allocatedLatFriction = friction * latRatio;
+        float allocatedLongFriction = friction * longRatio;
+
+        float finalLatForceMagnitude = Mathf.Min(allocatedLatFriction, Mathf.Abs(maxLatForce)) * -Mathf.Sign(latSpeed);
+        float finalLongForceMagnitude = Mathf.Min(allocatedLongFriction, Mathf.Abs(maxLongForce)) * -Mathf.Sign(longSpeed);
+
+        Vector3 gripLat = latSurfaceDir * finalLatForceMagnitude;
+        Vector3 gripLong = longSurfaceDir * finalLongForceMagnitude;
+
+        rb.AddForceAtPosition(gripLong + gripLat, transform.position, ForceMode.Force);
+
+        Debug.DrawLine(transform.position, transform.position + gripLong, Color.blue);
+        Debug.DrawLine(transform.position, transform.position + gripLat, Color.red);
     }
 
     void SleepTimer()

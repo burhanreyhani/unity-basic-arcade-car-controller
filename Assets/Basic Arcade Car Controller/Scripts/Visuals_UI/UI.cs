@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class UI : MonoBehaviour
 {
-    [SerializeField] BasicCarController basicCarController;
     [SerializeField] BasicEngine basicEngine;
 
     BasicNitroSystem basicNitroSystem;
@@ -18,8 +17,8 @@ public class UI : MonoBehaviour
 
     void Start()
     {
-        basicNitroSystem = basicCarController.GetComponent<BasicNitroSystem>();
-        basicGearBox = basicCarController.GetComponent<BasicGearBox>();
+        basicNitroSystem = basicEngine.GetComponent<BasicNitroSystem>();
+        basicGearBox = basicEngine.GetComponent<BasicGearBox>();
     }
 
     void Update()
@@ -31,7 +30,7 @@ public class UI : MonoBehaviour
     void UpdateUI()
     {
         if (speedText != null)
-            speedText.text = "Speed: " + basicCarController.carSpeedKmh.ToString("F1") + " KM/H";
+            speedText.text = "Speed: " + basicEngine.speedKmh.ToString("F1") + " KM/H";
 
         if (engineTorque != null)
             engineTorque.text = "Engine Torque: " + basicEngine.currentNetEngTorque.ToString("F1");
