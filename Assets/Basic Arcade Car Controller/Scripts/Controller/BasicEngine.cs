@@ -43,7 +43,7 @@ public class BasicEngine : MonoBehaviour
 
     void Awake()
     {
-        inputProvider = GetComponentInChildren<IInputProvider>();
+        inputProvider = GetComponent<IInputProvider>();
     }
 
     void Start()
@@ -107,7 +107,7 @@ public class BasicEngine : MonoBehaviour
         float scaleJitter = 0.5f;
         float jitterValue = Random.Range(minJitter, maxJitter) * scaleJitter;
         currentRPM += deltaRPM + jitterValue;
-        
+    
         float clutchThreshold = 0.5f;
         if (basicGearBox.currentGear != 0 && basicGearBox.clutchVal < clutchThreshold)
         {

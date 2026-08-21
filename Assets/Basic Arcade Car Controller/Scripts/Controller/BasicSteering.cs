@@ -98,8 +98,8 @@ public class BasicSteering : MonoBehaviour
             leftSteering[i].transform.localRotation = leftInitialRotations[i] * Quaternion.Euler(0f, leftAngle, 0f);
         }
 
-        Debug.Log("Outer: " + outerAngle);
-        Debug.Log("Inner: " + angle);
+        //Debug.Log("Outer: " + outerAngle);
+        //Debug.Log("Inner: " + angle);
     }
 
     void ResetWheelRotations()

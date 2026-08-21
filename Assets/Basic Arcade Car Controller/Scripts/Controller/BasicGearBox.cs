@@ -39,7 +39,7 @@ public class BasicGearBox : MonoBehaviour
 
     void Awake()
     {
-        inputProvider = GetComponentInChildren<IInputProvider>();
+        inputProvider = GetComponent<IInputProvider>();
     }
 
     void Start()
@@ -220,7 +220,8 @@ public class BasicGearBox : MonoBehaviour
         float clutchTorqueMax = clutchStiffness * clutchEngage * clutchResistance;
         float rawFeedbackForce = deltaOmega * clutchStiffness * clutchEngage;
 
-        return Mathf.Clamp(rawFeedbackForce, -clutchTorqueMax, clutchTorqueMax);
+        //return Mathf.Clamp(rawFeedbackForce, -clutchTorqueMax, clutchTorqueMax); // This causes bug. Don't know why.
+        return Mathf.Clamp(rawFeedbackForce, 0, clutchTorqueMax);
     }
 
     public bool isReversing() // Not used but might be needed.
